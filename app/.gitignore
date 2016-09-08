@@ -1,1 +1,11 @@
-/build
+*.iml
+.gradle
+.idea
+*/build
+/local.properties
+/gradle
+gradle.properties
+gradlew
+gradlew.bat
+proguard-rules.pro
+appengine-web.xml
