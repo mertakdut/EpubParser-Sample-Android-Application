@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">EpubParser Sample Android Application</string>
+    <string name="title_activity_menu">MenuActivity</string>
+</resources>
