@@ -107,9 +107,9 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
             WebView webView = new WebView(MainActivity.this);
             webView.loadDataWithBaseURL(null, data, mimeType, encoding, null);
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-            }
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+//                webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+//            }
 
             webView.setLayoutParams(layoutParams);
 

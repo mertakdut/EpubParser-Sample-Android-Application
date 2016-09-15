@@ -18,6 +18,8 @@ import com.github.mertakdut.Reader;
 import com.github.mertakdut.exception.ReadingException;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -108,6 +110,9 @@ public class MenuActivity extends AppCompatActivity {
 
             List<File> files = getListFiles(new File(Environment.getExternalStorageDirectory().getAbsolutePath()));
 
+            File sampleFile = getFileFromAssets("pg28885-images_new.epub");
+            files.add(0, sampleFile);
+
             for (File file : files) {
                 BookInfo bookInfo = new BookInfo();
 
@@ -119,6 +124,28 @@ public class MenuActivity extends AppCompatActivity {
         }
 
         return bookInfoList;
+    }
+
+    public File getFileFromAssets(String fileName) {
+
+        File file = new File(getCacheDir() + "/" + fileName);
+
+        if (!file.exists()) try {
+
+            InputStream is = getAssets().open(fileName);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(buffer);
+            fos.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return file;
     }
 
     private List<File> getListFiles(File parentDir) {
