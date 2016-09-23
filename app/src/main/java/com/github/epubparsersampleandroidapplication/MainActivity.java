@@ -1,19 +1,25 @@
 package com.github.epubparsersampleandroidapplication;
 
+import android.app.SearchManager;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.SearchView;
+import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.util.Base64;
 import android.util.DisplayMetrics;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -47,10 +53,16 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
     private boolean isPickedWebView = false;
 
+    private MenuItem searchMenuItem;
+    private SearchView searchView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         pxScreenWidth = getResources().getDisplayMetrics().widthPixels;
 
@@ -75,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
     @Override
     public View onFragmentReady(int position) {
+
         reader.setMaxContentPerSection(1250);
         reader.setCssStatus(isPickedWebView ? CssStatus.INCLUDE : CssStatus.OMIT);
         reader.setIsIncludingTextContent(true);
@@ -99,7 +112,67 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
         return null;
     }
 
-    public View setFragmentView(boolean isContentStyled, String data, String mimeType, String encoding) {
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        searchMenuItem = menu.findItem(R.id.action_search);
+        searchView = (SearchView) MenuItemCompat.getActionView(searchMenuItem);
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+
+                if (query != null && !query.equals("")) {
+                    loseFocusOnSearchView();
+                    Toast.makeText(MainActivity.this, "Skipping page to : " + query, Toast.LENGTH_LONG).show();
+
+
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+
+                if (newText.contains("[^0-9]")) {
+                    searchView.setQuery(newText.replaceAll("[^0-9]", ""), false);
+                    return true;
+                }
+
+                return false;
+
+            }
+        });
+
+        return true;
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (!searchView.isIconified()) {
+            loseFocusOnSearchView();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        int id = item.getItemId();
+
+        if (id == R.id.action_search) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private View setFragmentView(boolean isContentStyled, String data, String mimeType, String encoding) {
 
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
@@ -143,6 +216,13 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
             scrollView.addView(textView);
             return scrollView;
         }
+    }
+
+    private void loseFocusOnSearchView() {
+        searchView.setQuery("", false);
+        searchView.clearFocus();
+        searchView.setIconified(true);
+        MenuItemCompat.collapseActionView(searchMenuItem);
     }
 
     private int dpToPx(int dp) {
