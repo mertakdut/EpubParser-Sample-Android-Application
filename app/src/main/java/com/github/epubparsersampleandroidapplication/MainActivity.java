@@ -16,6 +16,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.text.Html;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.view.Menu;
@@ -38,6 +39,8 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
     private Reader reader;
 
+    private ViewPager mViewPager;
+
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -56,6 +59,8 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
     private MenuItem searchMenuItem;
     private SearchView searchView;
 
+    private boolean isSkippedToPage = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -68,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-        ViewPager mViewPager = (ViewPager) findViewById(R.id.container);
+        mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setOffscreenPageLimit(0);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
@@ -91,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
         reader.setMaxContentPerSection(1250);
         reader.setCssStatus(isPickedWebView ? CssStatus.INCLUDE : CssStatus.OMIT);
         reader.setIsIncludingTextContent(true);
+        reader.setIsOmittingTitleTag(true);
 
         BookSection bookSection = null;
 
@@ -101,9 +107,16 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
             Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
         } catch (OutOfPagesException e) {
             e.printStackTrace();
-            this.pageCount = position;
+            this.pageCount = e.getPageCount();
+
+            if (isSkippedToPage) {
+                Toast.makeText(MainActivity.this, "Max page number is: " + this.pageCount, Toast.LENGTH_LONG).show();
+            }
+
             mSectionsPagerAdapter.notifyDataSetChanged();
         }
+
+        isSkippedToPage = false;
 
         if (bookSection != null) {
             return setFragmentView(isPickedWebView, bookSection.getSectionContent(), "text/html", "UTF-8"); // reader.isContentStyled
@@ -126,10 +139,25 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
             public boolean onQueryTextSubmit(String query) {
 
                 if (query != null && !query.equals("")) {
-                    loseFocusOnSearchView();
-                    Toast.makeText(MainActivity.this, "Skipping page to : " + query, Toast.LENGTH_LONG).show();
 
+                    if (TextUtils.isDigitsOnly(query)) {
+                        loseFocusOnSearchView();
 
+                        int skippingPage = Integer.valueOf(query);
+
+                        if (skippingPage > 0) {
+                            isSkippedToPage = true;
+                            mViewPager.setCurrentItem(skippingPage - 1);
+                        } else {
+                            Toast.makeText(MainActivity.this, "Page number can't be less than 1", Toast.LENGTH_LONG).show();
+                        }
+
+                    } else {
+                        loseFocusOnSearchView();
+                        Toast.makeText(MainActivity.this, "Only numbers are allowed", Toast.LENGTH_LONG).show();
+                    }
+
+                    return true;
                 }
 
                 return false;
@@ -137,14 +165,7 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
             @Override
             public boolean onQueryTextChange(String newText) {
-
-                if (newText.contains("[^0-9]")) {
-                    searchView.setQuery(newText.replaceAll("[^0-9]", ""), false);
-                    return true;
-                }
-
                 return false;
-
             }
         });
 
@@ -201,10 +222,11 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
                     byte[] imageAsBytes = Base64.decode(imageAsStr, Base64.DEFAULT);
                     Bitmap imageAsBitmap = BitmapFactory.decodeByteArray(imageAsBytes, 0, imageAsBytes.length);
 
-                    int[] imageWidthStartEnd = calculateImageStartEndPos(imageAsBitmap.getHeight(), imageAsBitmap.getWidth());
+                    int imageWidthStartPx = (pxScreenWidth - imageAsBitmap.getWidth()) / 2;
+                    int imageWidthEndPx = pxScreenWidth - imageWidthStartPx;
 
                     Drawable imageAsDrawable = new BitmapDrawable(getResources(), imageAsBitmap);
-                    imageAsDrawable.setBounds(imageWidthStartEnd[0], 0, imageWidthStartEnd[1], imageWidthStartEnd[2]);
+                    imageAsDrawable.setBounds(imageWidthStartPx, 0, imageWidthEndPx, imageAsBitmap.getHeight());
                     return imageAsDrawable;
                 }
             }, null));
@@ -230,24 +252,9 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
         return Math.round(dp * (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
     }
 
-    private int[] calculateImageStartEndPos(int bitmapHeight, int bitmapWidth) {
-
-        float imageSizeMultiplier = ((float) pxScreenWidth / bitmapWidth) * 0.6f; // TODO: This is not reasonable. Fix this.
-
-        if (imageSizeMultiplier > 1.0f) {
-            bitmapHeight = ((int) (((float) bitmapHeight) * imageSizeMultiplier));
-            bitmapWidth = ((int) (((float) bitmapWidth) * imageSizeMultiplier));
-        }
-
-        int imageWidthStartPx = (pxScreenWidth - bitmapWidth) / 2;
-        int imageWidthEndPx = pxScreenWidth - imageWidthStartPx;
-
-        return new int[]{imageWidthStartPx, imageWidthEndPx, bitmapHeight};
-    }
-
     public class SectionsPagerAdapter extends FragmentStatePagerAdapter {
 
-        public SectionsPagerAdapter(FragmentManager fm) {
+        SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
         }
 

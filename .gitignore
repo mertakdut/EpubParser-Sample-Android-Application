@@ -10,4 +10,5 @@ gradlew
 gradlew.bat
 proguard-rules.pro
 appengine-web.xml
-*.apk
+app/libs/
+projectFilesBackup/
