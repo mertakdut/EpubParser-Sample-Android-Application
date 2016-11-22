@@ -12,3 +12,4 @@ proguard-rules.pro
 appengine-web.xml
 app/libs/
 projectFilesBackup/
+*.apk

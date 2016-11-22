@@ -83,7 +83,22 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
             try {
                 reader = new Reader();
+
+                // Setting optionals once per file is enough.
+                reader.setMaxContentPerSection(1250);
+                reader.setCssStatus(isPickedWebView ? CssStatus.INCLUDE : CssStatus.OMIT);
+                reader.setIsIncludingTextContent(true);
+                reader.setIsOmittingTitleTag(true);
+
+                // This method must be called before readSection.
                 reader.setFullContent(filePath);
+
+//                int lastSavedPage = reader.setFullContentWithProgress(filePath);
+                if (reader.isSavedProgressFound()) {
+                    int lastSavedPage = reader.loadProgress();
+                    mViewPager.setCurrentItem(lastSavedPage);
+                }
+
             } catch (ReadingException e) {
                 Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
             }
@@ -92,11 +107,6 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
     @Override
     public View onFragmentReady(int position) {
-
-        reader.setMaxContentPerSection(1250);
-        reader.setCssStatus(isPickedWebView ? CssStatus.INCLUDE : CssStatus.OMIT);
-        reader.setIsIncludingTextContent(true);
-        reader.setIsOmittingTitleTag(true);
 
         BookSection bookSection = null;
 
@@ -145,11 +155,11 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
 
                         int skippingPage = Integer.valueOf(query);
 
-                        if (skippingPage > 0) {
+                        if (skippingPage >= 0) {
                             isSkippedToPage = true;
-                            mViewPager.setCurrentItem(skippingPage - 1);
+                            mViewPager.setCurrentItem(skippingPage);
                         } else {
-                            Toast.makeText(MainActivity.this, "Page number can't be less than 1", Toast.LENGTH_LONG).show();
+                            Toast.makeText(MainActivity.this, "Page number can't be less than 0", Toast.LENGTH_LONG).show();
                         }
 
                     } else {
@@ -178,6 +188,21 @@ public class MainActivity extends AppCompatActivity implements PageFragment.OnFr
             loseFocusOnSearchView();
         } else {
             super.onBackPressed();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            reader.saveProgress(mViewPager.getCurrentItem());
+            Toast.makeText(MainActivity.this, "Saved page: " + mViewPager.getCurrentItem() + "...", Toast.LENGTH_LONG).show();
+        } catch (ReadingException e) {
+            e.printStackTrace();
+            Toast.makeText(MainActivity.this, "Progress is not saved: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        } catch (OutOfPagesException e) {
+            e.printStackTrace();
+            Toast.makeText(MainActivity.this, "Progress is not saved. Out of Bounds. Page Count: " + e.getPageCount(), Toast.LENGTH_LONG).show();
         }
     }
 
